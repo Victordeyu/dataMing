@@ -1,0 +1,11 @@
+1、思路是分开离散变量（无偏序关系）和连续变量（有偏序关系），离散变量用中位数进行填补，连续变量不填补NaN，在独热时NaN独占一列。
+2、跳过了对长文本的处理（直接删去了）。对于日期，提取出年份，而数据集2、3、4、5都是与年份相关的，可以进行连接。我的思路是把数据集2、3、4、5连接后的表（主键为id，YEAR而不仅仅只是id），然后用id进行预测时，若有多个YEAR列，将其预测结果取平均。而训练时，每个（id,YEAR）对都当成一个样本。
+3、base_info在原base_info的基础上删掉部分难处理的列，合并了相关的列（如industryphy:行业类别代码, industryco:行业细类代码，又如enttype:企业类型, enttypeitem:企业类型小类，enttypeminu:企业类型细类）（注：base_info仍含有NaN数据）
+4、base_info_distinct和base_info_continuous是对变量是否连续的划分，形成了两个表，其中前者仍有NaN（可以用独热pandas.get_dummies函数处理），后者已经用中位数填补NaN值（可能不应该用中位数填补，或许是这点导致模型准确度不高？）
+5、tax_info、change_info、news_info、other_info都是对原文件进行处理后的文件，详细处理过程请阅读《代码4.0》的注释。
+6、a_distinct和a_continuous是对annual表的数据进行了提取。同样，前者仍有NaN（可以用独热pandas.get_dummies函数处理），后者已经用中位数填补NaN值
+7、sum_distinct和sum_continuous是对所有表的全外连接，含有NaN的列用中位数（对于连续变量）和众数（对于离散变量）填补，并新建一列来表示这些列是否本来就是空的（用0和1表示）。
+8、sum_data是对sum_distinct和sum_continuous的全外连接。是所有表的数据的整合。
+9、用sum_distinct、sum_data等联合数据进行决策树预测时，精度反而比只用base_info_distinct的决策树要低。前者73%，后者77%。
+10、现在可以试试把不同的表扔进不同的模型，一方面试试不同表格的组合（有些表格可能还需要你再加工一下）是否有效果，另一方面调参。
+11、对了，很重要的一点是，跑出73%的sum数据因为主键是（id,YEAR）而不仅仅是id，我采取的方法是，预测某个id时，如果对应有多个（id,YEAR）行，则分别对这些行预测，得到的取平均，所以这个过程的代码是要自己写的（详情见我的“#填表”注释），而不仅仅是pred_y=model.predict(x_test)！
